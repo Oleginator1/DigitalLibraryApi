@@ -22,9 +22,7 @@ namespace DigitalLibraryApi.Controllers
         }
 
         [HttpGet("search")]
-        public ActionResult<IEnumerable<Book>> Search(
-            [FromQuery] string? title,
-            [FromQuery] string? author)
+        public ActionResult<IEnumerable<Book>> Search([FromQuery] string? title, [FromQuery] string? author)
         {
             var result = BookRepository.Books.AsEnumerable();
 
