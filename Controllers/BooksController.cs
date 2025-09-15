@@ -3,11 +3,11 @@ using DigitalLibraryApi.Models;
 
 namespace DigitalLibraryApi.Controllers
 {
-    [ApiController]           // Marks this class as a Web API controller
-    [Route("books")]          // Base route: /books
+    [ApiController]           
+    [Route("books")]         
     public class BooksController : ControllerBase
     {
-        // Static in-memory list of 10 books (our "database")
+        
         private static readonly List<Book> books = new()
         {
             new Book { Id = 1, Title = "The Pragmatic Developer", Author = "A. Coder", ISBN = "978-0000000001", Year = 2010, Description = "Practical advice for daily development." },
@@ -36,5 +36,28 @@ namespace DigitalLibraryApi.Controllers
             var book = books.FirstOrDefault(b => b.Id == id);
             return book is not null ? Ok(book) : NotFound();
         }
+
+
+        // GET /books/search?title=...&author=...
+        [HttpGet("search")]
+        public ActionResult<IEnumerable<Book>> Search(
+            [FromQuery] string? title,
+            [FromQuery] string? author)
+        {
+            var result = books.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                result = result.Where(b => b.Title.Contains(title, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(author))
+            {
+                result = result.Where(b => b.Author.Contains(author, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return Ok(result);
+        }
+
     }
 }

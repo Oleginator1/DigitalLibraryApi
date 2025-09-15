@@ -33,3 +33,4 @@ C:\Users\olegn\source\repos\DigitalLibraryApi\obj\Debug\net8.0\refint\DigitalLib
 C:\Users\olegn\source\repos\DigitalLibraryApi\obj\Debug\net8.0\DigitalLibraryApi.pdb
 C:\Users\olegn\source\repos\DigitalLibraryApi\obj\Debug\net8.0\DigitalLibraryApi.genruntimeconfig.cache
 C:\Users\olegn\source\repos\DigitalLibraryApi\obj\Debug\net8.0\ref\DigitalLibraryApi.dll
+C:\Users\olegn\source\repos\DigitalLibraryApi\obj\Debug\net8.0\DigitalLibraryApi.sourcelink.json

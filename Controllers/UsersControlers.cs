@@ -4,10 +4,10 @@ using DigitalLibraryApi.Models;
 namespace DigitalLibraryApi.Controllers
 {
     [ApiController]
-    [Route("users")] // Base route: /users
+    [Route("users")] 
     public class UsersController : ControllerBase
     {
-        // Static in-memory list of users
+        
         private static readonly List<User> users = new()
         {
             new User { Id = 1, Username = "alice", Email = "alice@example.com" },
