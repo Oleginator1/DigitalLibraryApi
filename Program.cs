@@ -1,3 +1,5 @@
+using DigitalLibraryApi.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -16,6 +18,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+app.UseRoleMiddleware();
 
 app.MapControllers(); 
 
