@@ -21,6 +21,8 @@ app.UseAuthorization();
 
 app.UseRoleMiddleware();
 
+app.UseUpperCaseTitleMiddleware();
+
 app.MapControllers(); 
 
 app.Run();
