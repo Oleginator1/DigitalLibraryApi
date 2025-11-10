@@ -8,5 +8,9 @@
         public string ISBN { get; set; }     
         public int Year { get; set; }        
         public string Description { get; set; }
+
+        //Relationship
+        public int CategoryId { get; set; }
+        public Category? Category { get; set; }
     }
 }
