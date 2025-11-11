@@ -1,0 +1,4 @@
+﻿Title,Author,ISBN,Year,Description,CategoryId
+The Republic,Plato,123-1234567890,1600,A philosophical dialogue on justice.,3
+War and Peace,Lev Tolstoy,123-1234567891,1869,A historical novel.,2
+Bad Book,,invalidISBN,1000,,1

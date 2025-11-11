@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CsvHelper;
+using DigitalLibraryApi.DTOs;
 using DigitalLibraryApi.Models;
 using DigitalLibraryApi.Repositories;
-using DigitalLibraryApi.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
+using System.Text;
 
 namespace DigitalLibraryApi.Controllers
 {
@@ -70,6 +74,133 @@ namespace DigitalLibraryApi.Controllers
 
             BookRepository.Books.Remove(book);
             return NoContent();
+        }
+
+        [HttpPost("import")]
+        [RequestSizeLimit(5 * 1024 * 1024)] // 5 MB limit
+        public async Task<IActionResult> ImportBooks(IFormFile file)
+        {
+            // ✅ 1. Validate file presence
+            if (file == null || file.Length == 0)
+                return BadRequest("No file uploaded.");
+
+            // ✅ 2. Validate MIME type
+            if (file.ContentType != "text/csv" && file.ContentType != "application/vnd.ms-excel")
+                return BadRequest("Invalid file type. Only CSV files are accepted.");
+
+            // ✅ 3. Validate file size
+            if (file.Length > 5 * 1024 * 1024)
+                return BadRequest("File too large. Maximum allowed size is 5 MB.");
+
+            var result = new
+            {
+                totalRows = 0,
+                successful = 0,
+                failed = 0,
+                errors = new List<object>(),
+                imported = new List<Book>()
+            };
+
+            using var stream = new StreamReader(file.OpenReadStream());
+            using var csv = new CsvReader(stream, CultureInfo.InvariantCulture);
+
+            var records = new List<CreateBookDto>();
+
+            try
+            {
+                records = csv.GetRecords<CreateBookDto>().ToList();
+            }
+            catch (Exception)
+            {
+                return BadRequest("CSV file format is invalid or columns don’t match CreateBookDto.");
+            }
+
+            var totalRows = records.Count;
+            var importedBooks = new List<Book>();
+            var errorList = new List<object>();
+
+            // ✅ 4. Validate and process each row
+            foreach (var (record, index) in records.Select((r, i) => (r, i + 1)))
+            {
+                var validationResults = new List<ValidationResult>();
+                var validationContext = new ValidationContext(record);
+
+                if (!Validator.TryValidateObject(record, validationContext, validationResults, true))
+                {
+                    errorList.Add(new
+                    {
+                        row = index,
+                        data = record,
+                        errors = validationResults.Select(v => v.ErrorMessage).ToList()
+                    });
+                    continue;
+                }
+
+                // ✅ 5. Map to Book model
+                var newBook = new Book
+                {
+                    Id = BookRepository.Books.Max(b => b.Id) + 1,
+                    Title = record.Title,
+                    Author = record.Author,
+                    ISBN = record.ISBN,
+                    Year = record.Year,
+                    Description = record.Description ?? string.Empty,
+                    CategoryId = record.CategoryId,
+                    Category = CategoryRepository.Categories.FirstOrDefault(c => c.Id == record.CategoryId)
+                };
+
+                importedBooks.Add(newBook);
+                BookRepository.Books.Add(newBook);
+            }
+
+            // ✅ 6. Build final JSON response
+            var response = new
+            {
+                totalRows = totalRows,
+                successful = importedBooks.Count,
+                failed = errorList.Count,
+                errors = errorList,
+                imported = importedBooks
+            };
+
+            return Ok(response);
+        }
+
+
+        [HttpGet("export")]
+        public IActionResult ExportBooks([FromQuery] string? title, [FromQuery] string? author)
+        {
+            // 1️⃣ Filter the data based on query parameters
+            var filteredBooks = BookRepository.Books
+                .Where(b =>
+                    (string.IsNullOrEmpty(title) || b.Title.Contains(title, StringComparison.OrdinalIgnoreCase)) &&
+                    (string.IsNullOrEmpty(author) || b.Author.Contains(author, StringComparison.OrdinalIgnoreCase))
+                )
+                .Select(b => new
+                {
+                    b.Id,
+                    b.Title,
+                    b.Author,
+                    b.ISBN,
+                    b.Year,
+                    b.Description,
+                    Category = CategoryRepository.Categories.FirstOrDefault(c => c.Id == b.CategoryId)?.Name ?? "Uncategorized"
+                })
+                .ToList();
+
+            // 2️⃣ Convert filtered data to CSV
+            using var memoryStream = new MemoryStream();
+            using var writer = new StreamWriter(memoryStream, Encoding.UTF8, leaveOpen: true);
+            using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+
+            csv.WriteRecords(filteredBooks);
+            writer.Flush();
+            memoryStream.Position = 0;
+
+            // 3️⃣ Return file with correct headers for download
+            var fileName = $"books_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+            return File(memoryStream.ToArray(), "text/csv", fileName);
         }
     }
 }

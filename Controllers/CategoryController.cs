@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CsvHelper;
 using DigitalLibraryApi.Models;
 using DigitalLibraryApi.Repositories;
+using Microsoft.AspNetCore.Mvc;
+using System.Globalization;
+using System.Text;
 
 namespace DigitalLibraryApi.Controllers
 {
@@ -26,6 +29,33 @@ namespace DigitalLibraryApi.Controllers
             CategoryRepository.Categories.Add(newCategory);
 
             return CreatedAtAction(nameof(GetAllCategories), new { id = newCategory.Id }, newCategory);
+        }
+
+        [HttpGet("export")]
+        public IActionResult ExportCategories([FromQuery] string? name)
+        {
+            // 1️⃣ Filter by name if provided
+            var filteredCategories = CategoryRepository.Categories
+                .Where(c => string.IsNullOrEmpty(name) ||
+                            c.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            // 2️⃣ Write filtered data to CSV
+            using var memoryStream = new MemoryStream();
+            using var writer = new StreamWriter(memoryStream, Encoding.UTF8, leaveOpen: true);
+            using var csv = new CsvWriter(writer, CultureInfo.InvariantCulture);
+
+            csv.WriteRecords(filteredCategories);
+            writer.Flush();
+            memoryStream.Position = 0;
+
+            // 3️⃣ Dynamic filename
+            var fileName = string.IsNullOrEmpty(name)
+                ? $"categories_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+                : $"categories_export_{name}_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+            // 4️⃣ Return downloadable file
+            return File(memoryStream.ToArray(), "text/csv", fileName);
         }
     }
 }
